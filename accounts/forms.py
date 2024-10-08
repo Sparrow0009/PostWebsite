@@ -10,5 +10,5 @@ class RegistrationForm(FlaskForm):
     phone = StringField(validators = [DataRequired()])
     password = PasswordField(validators = [DataRequired()])
     confirm_password = PasswordField(validators = [DataRequired(), EqualTo('password', message = "Both Password fields must be equal")])
-    submit = SubmitField
+    submit = SubmitField()
 
