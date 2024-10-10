@@ -7,7 +7,8 @@ from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.menu import MenuLink
 import secrets
-
+from werkzeug.security import check_password_hash, generate_password_hash
+from wtforms.validators import EqualTo
 
 app = Flask(__name__)
 
@@ -18,6 +19,11 @@ app.config['SECRET_KEY'] = secrets.token_hex(16)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///csc2031blog.db'
 app.config['SQLALCHEMY_ECHO'] = True
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+#CAPTCHA CONFIGURATION
+app.config['RECAPTCHA_PUBLIC_KEY'] ='6LcaBV4qAAAAABbnBqXTymeD_jLjJfiXGOu8Wu82'
+app.config['RECAPTCHA_PRIVATE_KEY'] ='6LcaBV4qAAAAAEZUnlbcLE0ypUMrxuLj6wsH1P6O'
+
 
 metadata = MetaData(
     naming_convention={
@@ -73,6 +79,9 @@ class User(db.Model):
         self.lastname = lastname
         self.phone = phone
         self.password = password
+
+    def check_password(self,password):
+        return self.password == password
 
 # DATABASE ADMINISTRATOR
 class MainIndexLink(MenuLink):

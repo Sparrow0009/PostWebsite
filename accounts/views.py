@@ -1,7 +1,6 @@
 from flask import  Blueprint, render_template, flash, redirect, url_for
 from werkzeug.security import check_password_hash
 from wtforms.validators import equal_to, EqualTo
-
 from accounts.forms import RegistrationForm, LoginForm
 from config import User, db
 
@@ -31,10 +30,10 @@ def registration():
 @accounts_bp.route('/login', methods = ['GET', 'POST'])
 def login():
     form = LoginForm()
-    user = User.query.filter_by(email = form.email.data).first()
     if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
         if user:
-            if EqualTo(user.password, form.password.data):
+            if user.check_password(form.password.data):
                 flash('Login Successful', category = 'success')
                 return redirect(url_for('posts.posts'))
             else:
