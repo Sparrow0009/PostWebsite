@@ -1,5 +1,8 @@
 from flask import  Blueprint, render_template, flash, redirect, url_for
-from accounts.forms import RegistrationForm
+from werkzeug.security import check_password_hash
+from wtforms.validators import equal_to, EqualTo
+
+from accounts.forms import RegistrationForm, LoginForm
 from config import User, db
 
 accounts_bp = Blueprint('accounts', __name__, template_folder='templates')
@@ -25,9 +28,22 @@ def registration():
 
     return render_template('accounts/registration.html', form = form)
 
-@accounts_bp.route('/login')
+@accounts_bp.route('/login', methods = ['GET', 'POST'])
 def login():
-    return render_template('accounts/login.html')
+    form = LoginForm()
+    user = User.query.filter_by(email = form.email.data).first()
+    if form.validate_on_submit():
+        if user:
+            if EqualTo(user.password, form.password.data):
+                flash('Login Successful', category = 'success')
+                return redirect(url_for('posts.posts'))
+            else:
+                flash("Invalid Password", category = 'danger')
+                return redirect(url_for('accounts.login'))
+        else:
+            flash("Email not found Please register", category = 'danger')
+            return redirect(url_for('accounts.registration'))
+    return render_template('accounts/login.html', form = form)
 
 @accounts_bp.route('/account')
 def account():
