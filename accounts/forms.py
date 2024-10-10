@@ -1,5 +1,5 @@
 from flask import Flask
-from flask_wtf import FlaskForm
+from flask_wtf import FlaskForm, RecaptchaField
 from setuptools.config.pyprojecttoml import validate
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, EqualTo, Length, Regexp
@@ -23,4 +23,5 @@ class LoginForm(FlaskForm):
     email = StringField(validators = [DataRequired()])
     password = PasswordField(validators = [DataRequired()])
     submit = SubmitField()
+    reCaptcha = RecaptchaField()
 
