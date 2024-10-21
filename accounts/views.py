@@ -1,8 +1,9 @@
-from flask import  Blueprint, render_template, flash, redirect, url_for
+from flask import  Blueprint, render_template, flash, redirect, url_for, session
 from werkzeug.security import check_password_hash
 from wtforms.validators import equal_to, EqualTo
 from accounts.forms import RegistrationForm, LoginForm
 from config import User, db
+from markupsafe import Markup
 
 accounts_bp = Blueprint('accounts', __name__, template_folder='templates')
 
@@ -29,19 +30,27 @@ def registration():
 
 @accounts_bp.route('/login', methods = ['GET', 'POST'])
 def login():
+    # checks if the session exists, if not, creates one and sets value to 0.
+    if not session.get("key"):
+        session["key"] = 0
     form = LoginForm()
     if form.validate_on_submit():
+
+        # queries the email from the database from the email gathered from the form
         user = User.query.filter_by(email=form.email.data).first()
-        if user:
-            if user.check_password(form.password.data):
-                flash('Login Successful', category = 'success')
-                return redirect(url_for('posts.posts'))
-            else:
-                flash("Invalid Password", category = 'danger')
-                return redirect(url_for('accounts.login'))
-        else:
-            flash("Email not found Please register", category = 'danger')
-            return redirect(url_for('accounts.registration'))
+        session["key"] += 1
+        if session["key"] >= 3:
+            flash(Markup('Login failed, maximum authentication attempts exceeded <a href = "/login"> Unlock Account</a>'), category = "danger")
+            return render_template('accounts/login.html')
+        # if the user's email does not exist in the database or the user's password does not match
+        if not user or not user.check_password(form.password.data):
+            remaining_attempts = 3 - session["key"]
+            flash("Login Failed, you have " + str(remaining_attempts) + " attempts remaining", category = 'danger')
+            return redirect(url_for('accounts.login'))
+
+        session["key"] = 0
+        flash("Login Successful", category = 'success')
+        return redirect(url_for('posts.posts'))
     return render_template('accounts/login.html', form = form)
 
 @accounts_bp.route('/account')
