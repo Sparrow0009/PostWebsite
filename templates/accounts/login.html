@@ -8,23 +8,23 @@
             <div>
                 <p>Please complete the following form to register an account to use the CSC2031 Blog.</p>
             </div>
-
+            <div>
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }} mt-3 alert-dismissible" role="alert">
+                    {{ message }}. Go to <a href="{{ url_for('accounts.login') }}">login page</a>.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" onclick=delete_flash(this)>
+                        <span>&times;</span>
+                    </button>
+                </div>
+                {% endfor %}
+                {% endwith %}
+            </div>
+            {% if form %}
             <form method="POST">
                 <div class="p-2 bg-light border border-primary">
                     <div style="text-align: left">
                         {{ form.csrf_token() }}
-                        <div>
-                            {% with messages = get_flashed_messages(with_categories=true) %}
-                            {% for category, message in messages %}
-                            <div class="alert alert-{{ category }} mt-3 alert-dismissible" role="alert">
-                                {{ message }}. Go to <a href="{{ url_for('accounts.login') }}">login page</a>.
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" onclick=delete_flash(this)>
-                                    <span>&times;</span>
-                                </button>
-                            </div>
-                            {% endfor %}
-                            {% endwith %}
-                        </div>
                         <div class="form-group">
                             {{ form.email.label}}<span style="color: red">*</span>
                             {{ form.email(class="form-control") }}
@@ -41,10 +41,9 @@
                         </div>
                     </div>
 
-
                 </div>
             </form>
-
+            {% endif %}
         </div>
         <div class="col-3"></div>
     </div>
