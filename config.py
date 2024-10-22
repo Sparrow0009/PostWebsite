@@ -1,4 +1,7 @@
 from flask import Flask, url_for
+from flask_limiter import Limiter
+from flask_limiter.contrib.util import get_remote_address_cloudflare
+from flask_limiter.util import get_remote_address
 from flask_sqlalchemy import  SQLAlchemy
 from flask_migrate import Migrate
 from sqlalchemy import MetaData
@@ -104,6 +107,7 @@ admin.add_link(MainIndexLink(name = 'Home Page'))
 admin.add_view(PostView(Post, db.session))
 admin.add_view(UserView(User, db.session))
 
+limiter = Limiter(key_func=get_remote_address, app=app, default_limits=['500 per day'])
 
 from accounts.views import accounts_bp
 from posts.views import posts_bp

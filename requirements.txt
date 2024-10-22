@@ -14,5 +14,6 @@ Flask-SQLAlchemy
 Flask-WTF
 Flask-Admin
 WTForms
+Flask-Limiter
 
 SQLAlchemy~=2.0.35

@@ -1,12 +1,13 @@
 from flask import  Blueprint, render_template, flash, redirect, url_for, session
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from werkzeug.security import check_password_hash
 from wtforms.validators import equal_to, EqualTo
 from accounts.forms import RegistrationForm, LoginForm
-from config import User, db
+from config import User, db, limiter
 from markupsafe import Markup
 
 accounts_bp = Blueprint('accounts', __name__, template_folder='templates')
-
 
 @accounts_bp.route('/registration', methods = ['GET', 'POST'])
 def registration():
@@ -28,7 +29,9 @@ def registration():
 
     return render_template('accounts/registration.html', form = form)
 
+
 @accounts_bp.route('/login', methods = ['GET', 'POST'])
+@limiter.limit('20 per minute', error_message= 'Too Many Requests')
 def login():
     # checks if the session exists, if not, creates one and sets value to 0.
     if not session.get("key"):
