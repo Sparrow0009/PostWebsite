@@ -17,7 +17,7 @@
                 {% endfor %}
                 {% endwith %}
             </div>
-            {% if form %}
+            {% if form and show_form %}
              <div>
                 <p>Please complete the following form to register an account to use the CSC2031 Blog.</p>
             </div>
@@ -44,7 +44,10 @@
                         {{ form.submit(class="btn btn-success") }}
                         </div>
                     </div>
-
+                </div>
+                {% else %}
+                <div class="p-3 border rounded shadow-sm bg-light">
+                   <a href="{{ url_for('accounts.reset_attempts') }}">Unlock Account</a>
                 </div>
             </form>
             {% endif %}

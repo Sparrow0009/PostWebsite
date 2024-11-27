@@ -46,6 +46,7 @@ def registration():
 def login():
     # checks if the session exists, if not, creates one and sets value to 0.
     global remaining_attempts
+    show_form = True
     if not session.get("key"):
         session["key"] = 0
     form = LoginForm()
@@ -72,12 +73,19 @@ def login():
         remaining_attempts = 3 - session["key"]
 
     if session["key"] >= 3:
-        flash(Markup('Login failed, maximum authentication attempts exceeded <a href = "/login"> Unlock Account</a>'), category = "danger")
-        return render_template('accounts/login.html')
+        flash(Markup('Login failed, maximum authentication attempts exceeded.'), category = "danger")
+        show_form = False
     elif 0 < session["key"] < 3:
         flash("Login Failed, you have {} attempts remaining".format(remaining_attempts), category='danger')
-            #return redirect(url_for('accounts.login'))
-    return render_template('accounts/login.html', form = form)
+        show_form = True
+    return render_template('accounts/login.html', form = form, show_form = show_form)
+
+
+@accounts_bp.route('/reset_attempts', methods=['GET'])
+def reset_attempts():
+    session["key"] = 0
+    flash("Your account has been unlocked, Please try logging in again now.", category = 'success')
+    return redirect(url_for('accounts.login'))
 
 @accounts_bp.route('/account')
 def account():
