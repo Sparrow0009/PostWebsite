@@ -30,7 +30,8 @@
         <div class="p-3 border rounded shadow-sm bg-light">
             <h2 class="text-center">Code</h2>
             <h4 class="text-center">{{secret}}</h4>
-        </div>
+            <h2 class="text-center">QR</h2>
+            <img src="{{ qrcode(qr_uri, box_size=5, border=5) }}" >
        <div class="p-3 border rounded shadow-sm bg-light">
            <h4 class="text-center">Once you have entered the code please click <a href="{{url_for('accounts.login') }}">here</a>.</h4>
     <div class="p-2 row">

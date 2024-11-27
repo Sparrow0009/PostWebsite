@@ -11,10 +11,12 @@ from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.menu import MenuLink
 import secrets
+from flask_qrcode import QRcode
 from werkzeug.security import check_password_hash, generate_password_hash
 from wtforms.validators import EqualTo
 
 app = Flask(__name__)
+qrcode = QRcode(app)
 
 # SECRET KEY FOR FLASK FORMS
 app.config['SECRET_KEY'] = secrets.token_hex(16)
