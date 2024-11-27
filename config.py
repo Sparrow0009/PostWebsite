@@ -1,3 +1,4 @@
+import pyotp
 from flask import Flask, url_for
 from flask_limiter import Limiter
 from flask_limiter.contrib.util import get_remote_address_cloudflare
@@ -76,12 +77,18 @@ class User(db.Model):
     phone = db.Column(db.String(100), nullable = False)
     posts = db.relationship("Post", order_by = Post.id, back_populates = 'user')
 
-    def __init__(self, email, firstname, lastname, phone, password):
+    #MFA information
+    mfa_key = db.Column(db.String(32), nullable = False, default=pyotp.random_base32)
+    mfa_enabled = db.Column(db.Boolean, default = False)
+
+    def __init__(self, email, firstname, lastname, phone, password, mfa_key=None):
         self.email = email
         self.firstname = firstname
         self.lastname = lastname
         self.phone = phone
         self.password = password
+        self.mfa_key = pyotp.random_base32()
+        self.mfa_enabled = False
 
     def check_password(self,password):
         return self.password == password
@@ -99,7 +106,7 @@ class PostView(ModelView):
 class UserView(ModelView):
     column_display_pk = True  # optional, but I like to see the IDs in the list
     column_hide_backrefs = False
-    column_list = ('id', 'email', 'password', 'firstname', 'lastname', 'phone', 'posts')
+    column_list = ('id', 'email', 'password', 'firstname', 'lastname', 'phone', 'posts', 'mfa_key', 'mfa_enabled')
 
 admin = Admin(app, name = 'DB Admin', template_mode= 'bootstrap4')
 admin._menu = admin._menu[1:]
@@ -116,3 +123,4 @@ from security.views import security_bp
 app.register_blueprint(accounts_bp)
 app.register_blueprint(posts_bp)
 app.register_blueprint(security_bp)
+app.config['FLASK_ADMIN_FLUID_LAYOUT'] = True

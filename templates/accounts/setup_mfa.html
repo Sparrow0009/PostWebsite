@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+    <div class="container">
+    <h1>Multi-Factor Authentication Setup</h1>
+   <div>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+        <div class="alert alert-info mt-3 alert-dismissible border rounded shadow-sm" role="alert" style="background-color: #e0f7fa; border-color: #80deea;">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" onclick=delete_flash(this)>
+                <span>&times;</span>
+            </button>
+        </div>
+        {% endfor %}
+        {% endwith %}
+    </div>
+    <div class="container mt-4">
+    <div class="p-3 border rounded shadow-sm bg-light">
+        <h4 class="text-center"> Open Microsoft Authenticator on your mobile.</h4>
+    </div>
+    <div class="p-3 border rounded shadow-sm bg-light">
+         <h4 class="text-center"> Alternatively, download Google Authenticator on your mobile.</h4>
+    </div>
+     <div class="p-3 border rounded shadow-sm bg-light">
+         <h4 class="text-center"> Select add new account.</h4>
+    </div>
+     <div class="p-3 border rounded shadow-sm bg-light">
+         <h4 class="text-center"> Manually enter the code below.</h4>
+     </div>
+        <div class="p-3 border rounded shadow-sm bg-light">
+            <h2 class="text-center">Code</h2>
+            <h4 class="text-center">{{secret}}</h4>
+        </div>
+       <div class="p-3 border rounded shadow-sm bg-light">
+           <h4 class="text-center">Once you have entered the code please click <a href="{{url_for('accounts.login') }}">here</a>.</h4>
+    <div class="p-2 row">
+        <div class="col-3"></div>
+        <div class="col-6">
+{% endblock %}

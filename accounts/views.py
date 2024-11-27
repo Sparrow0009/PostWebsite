@@ -1,4 +1,6 @@
+import pyotp
 from flask import  Blueprint, render_template, flash, redirect, url_for, session
+from flask.cli import pass_script_info
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.security import check_password_hash
@@ -11,6 +13,7 @@ accounts_bp = Blueprint('accounts', __name__, template_folder='templates')
 
 @accounts_bp.route('/registration', methods = ['GET', 'POST'])
 def registration():
+    mfa_key = pyotp.random_base32()
     form = RegistrationForm()
     if form.validate_on_submit():
         if User.query.filter_by(email=form.email.data).first():
@@ -20,12 +23,15 @@ def registration():
                         firstname = form.firstname.data,
                         lastname = form.lastname.data,
                         phone = form.phone.data,
-                        password  =form.password.data)
+                        password = form.password.data,
+                        mfa_key = mfa_key)
 
         db.session.add(new_user)
         db.session.commit()
-        flash('Account Created', category='success')
-        return redirect(url_for('accounts.login'))
+        flash('You have not yet enabled Multi-Factor Authentication. Please enable first to login')
+       # flash('Account Created', category='success')
+        return render_template('accounts/setup_mfa.html', secret = new_user.mfa_key)
+        #return redirect(url_for('accounts.login'))
 
     return render_template('accounts/registration.html', form = form)
 
@@ -46,10 +52,14 @@ def login():
             flash(Markup('Login failed, maximum authentication attempts exceeded <a href = "/login"> Unlock Account</a>'), category = "danger")
             return render_template('accounts/login.html')
         # if the user's email does not exist in the database or the user's password does not match
-        if not user or not user.check_password(form.password.data):
+        if not user or not user.check_password(form.password.data) or not pyotp.TOTP(user.mfa_key).verify(form.pin.data):
             remaining_attempts = 3 - session["key"]
-            flash("Login Failed, you have " + str(remaining_attempts) + " attempts remaining", category = 'danger')
+            flash("Login Failed, you have {} attempts remaining".format(remaining_attempts),category = 'danger')
             return redirect(url_for('accounts.login'))
+
+        if not user.mfa_enabled:
+            user.mfa_enabled = True
+            db.session.commit()
 
         session["key"] = 0
         flash("Login Successful", category = 'success')

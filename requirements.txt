@@ -17,3 +17,4 @@ WTForms
 Flask-Limiter
 
 SQLAlchemy~=2.0.35
+pyotp
