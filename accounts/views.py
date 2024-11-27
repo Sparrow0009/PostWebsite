@@ -32,7 +32,7 @@ def registration():
         db.session.add(new_user)
         db.session.commit()
 
-        uri = str(pyotp.totp.TOTP(mfa_key).provisioning_uri(new_user.email, "MyAppName"))
+        uri = str(pyotp.totp.TOTP(new_user.mfa_key).provisioning_uri(new_user.email, "Sparsh's Post app"))
         flash('You have not yet enabled Multi-Factor Authentication. Please enable first to login')
        # flash('Account Created', category='success')
         return render_template('accounts/setup_mfa.html', secret=new_user.mfa_key, qr_uri = uri)
@@ -45,30 +45,38 @@ def registration():
 @limiter.limit('20 per minute', error_message= 'Too Many Requests')
 def login():
     # checks if the session exists, if not, creates one and sets value to 0.
+    global remaining_attempts
     if not session.get("key"):
         session["key"] = 0
     form = LoginForm()
     if form.validate_on_submit():
-
         # queries the email from the database from the email gathered from the form
         user = User.query.filter_by(email=form.email.data).first()
-        session["key"] += 1
-        if session["key"] >= 3:
-            flash(Markup('Login failed, maximum authentication attempts exceeded <a href = "/login"> Unlock Account</a>'), category = "danger")
-            return render_template('accounts/login.html')
         # if the user's email does not exist in the database or the user's password does not match
-        if not user or not user.check_password(form.password.data) or not pyotp.TOTP(user.mfa_key).verify(form.pin.data):
-            remaining_attempts = 3 - session["key"]
-            flash("Login Failed, you have {} attempts remaining".format(remaining_attempts),category = 'danger')
-            return redirect(url_for('accounts.login'))
+        if user and user.check_password(form.password.data):
+            if pyotp.TOTP(user.mfa_key).verify(form.pin.data):
+                if not user.mfa_enabled:
+                    user.mfa_enabled = True
+                    db.session.commit()
+                session["key"] = 0
+                flash("Login Successful", category='success')
+                return redirect(url_for('posts.posts'))
 
-        if not user.mfa_enabled:
-            user.mfa_enabled = True
-            db.session.commit()
+            elif not user.mfa_enabled:
+                flash("Multi Factor Authentication has not been enabled, please enable it to log in.", category='danger')
+                uri = str(pyotp.totp.TOTP(user.mfa_key).provisioning_uri(user.email, "Sparsh's post app"))
+                return render_template('accounts/setup_mfa.html', secret = user.mfa_key, qr_uri = uri)
+            flash("Incorrect Pin, please try again", category='danger')
+        flash("Incorrect Email or Password, please try again", category='danger')
+        session["key"] += 1
+        remaining_attempts = 3 - session["key"]
 
-        session["key"] = 0
-        flash("Login Successful", category = 'success')
-        return redirect(url_for('posts.posts'))
+    if session["key"] >= 3:
+        flash(Markup('Login failed, maximum authentication attempts exceeded <a href = "/login"> Unlock Account</a>'), category = "danger")
+        return render_template('accounts/login.html')
+    elif 0 < session["key"] < 3:
+        flash("Login Failed, you have {} attempts remaining".format(remaining_attempts), category='danger')
+            #return redirect(url_for('accounts.login'))
     return render_template('accounts/login.html', form = form)
 
 @accounts_bp.route('/account')
