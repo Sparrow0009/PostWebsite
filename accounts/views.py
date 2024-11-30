@@ -7,14 +7,17 @@ from flask_limiter.util import get_remote_address
 from werkzeug.security import check_password_hash
 from wtforms.validators import equal_to, EqualTo
 from accounts.forms import RegistrationForm, LoginForm
-from config import User, db, limiter
+from config import User, db, limiter, load_user
 from markupsafe import Markup
+from flask_login import login_user, logout_user, current_user, login_required
 
 accounts_bp = Blueprint('accounts', __name__, template_folder='templates')
 
 @accounts_bp.route('/registration', methods = ['GET', 'POST'])
 def registration():
-
+    if current_user.is_authenticated:
+        flash("You are already logged in", category = "info")
+        return redirect(url_for('posts.posts'))
     mfa_key = pyotp.random_base32()
 
     form = RegistrationForm()
@@ -34,9 +37,7 @@ def registration():
 
         uri = str(pyotp.totp.TOTP(new_user.mfa_key).provisioning_uri(new_user.email, "Sparsh's Post app"))
         flash('You have not yet enabled Multi-Factor Authentication. Please enable first to login')
-       # flash('Account Created', category='success')
         return render_template('accounts/setup_mfa.html', secret=new_user.mfa_key, qr_uri = uri)
-        #return redirect(url_for('accounts.login'))
 
     return render_template('accounts/registration.html', form = form)
 
@@ -44,6 +45,11 @@ def registration():
 @accounts_bp.route('/login', methods = ['GET', 'POST'])
 @limiter.limit('20 per minute', error_message= 'Too Many Requests')
 def login():
+
+    if current_user.is_authenticated:
+        flash("You are already logged in", category = "info")
+        return redirect(url_for('posts.posts'))
+
     # checks if the session exists, if not, creates one and sets value to 0.
     global remaining_attempts
     show_form = True
@@ -51,6 +57,7 @@ def login():
         session["key"] = 0
     form = LoginForm()
     if form.validate_on_submit():
+
         # queries the email from the database from the email gathered from the form
         user = User.query.filter_by(email=form.email.data).first()
         # if the user's email does not exist in the database or the user's password does not match
@@ -59,6 +66,8 @@ def login():
                 if not user.mfa_enabled:
                     user.mfa_enabled = True
                     db.session.commit()
+
+                login_user(user)
                 session["key"] = 0
                 flash("Login Successful", category='success')
                 return redirect(url_for('posts.posts'))
@@ -82,11 +91,25 @@ def login():
 
 
 @accounts_bp.route('/reset_attempts', methods=['GET'])
+@login_required
 def reset_attempts():
     session["key"] = 0
     flash("Your account has been unlocked, Please try logging in again now.", category = 'success')
     return redirect(url_for('accounts.login'))
 
+
+@accounts_bp.route('/logout', methods=['GET','POST'])
+def logout():
+    if current_user.is_authenticated:
+        logout_user()
+        flash("You have been successfully logged out.", category='success')
+    return redirect(url_for('index'))
+
+@login_required
 @accounts_bp.route('/account')
+@login_required
 def account():
-    return render_template('accounts/account.html')
+    if current_user.is_authenticated:
+        return render_template('accounts/account.html')
+    else:
+        return render_template('accounts/account.html', user=None)

@@ -4,7 +4,7 @@ from flask_limiter import Limiter
 from flask_limiter.contrib.util import get_remote_address_cloudflare
 from flask_limiter.util import get_remote_address
 from flask_sqlalchemy import  SQLAlchemy
-from flask_migrate import Migrate
+from flask_migrate import Migrate, current
 from sqlalchemy import MetaData
 from datetime import datetime
 from flask_admin import Admin
@@ -12,11 +12,24 @@ from flask_admin.contrib.sqla import ModelView
 from flask_admin.menu import MenuLink
 import secrets
 from flask_qrcode import QRcode
+from flask_login import LoginManager, current_user
+from flask_login import UserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
 from wtforms.validators import EqualTo
 
 app = Flask(__name__)
+
 qrcode = QRcode(app)
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'accounts.login'
+login_manager.login_message = 'Please Log in first you donut!'
+login_manager.login_message_category = 'info'
+
+@login_manager.user_loader
+def load_user(id):
+    return User.query.get(int(id))
 
 # SECRET KEY FOR FLASK FORMS
 app.config['SECRET_KEY'] = secrets.token_hex(16)
@@ -49,12 +62,13 @@ class Post(db.Model):
     __tablename__ = 'posts'
 
     id = db.Column(db.Integer, primary_key=True)
-    userid = db.Column(db.Integer, db.ForeignKey('users.id'))
+    userid = db.Column(db.Integer, db.ForeignKey('users.id'), nullable = False)
     created = db.Column(db.DateTime, nullable=False)
     title = db.Column(db.Text, nullable=False)
     body = db.Column(db.Text, nullable=False)
     user = db.relationship("User", back_populates="posts")
-    def __init__(self, title, body):
+    def __init__(self, userid, title, body):
+        self.userid = userid
         self.created = datetime.now()
         self.title = title
         self.body = body
@@ -65,7 +79,7 @@ class Post(db.Model):
         self.body = body
         db.session.commit()
 
-class User(db.Model):
+class User(db.Model, UserMixin):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key = True)
 
@@ -82,6 +96,7 @@ class User(db.Model):
     #MFA information
     mfa_key = db.Column(db.String(32), nullable = False, default=pyotp.random_base32)
     mfa_enabled = db.Column(db.Boolean, default = False)
+    active = db.Column(db.Boolean, nullable = False, default = True)
 
     def __init__(self, email, firstname, lastname, phone, password, mfa_key=None):
         self.email = email
@@ -91,6 +106,13 @@ class User(db.Model):
         self.password = password
         self.mfa_key = pyotp.random_base32()
         self.mfa_enabled = False
+
+    @property
+    def is_active(self):
+        return self.active
+
+    def get_id(self):
+        return str(self.id)
 
     def check_password(self,password):
         return self.password == password

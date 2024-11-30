@@ -1,4 +1,47 @@
 {% extends "base.html" %}
 {% block content %}
     <h1>Account</h1>
+<div class="container mt-4">
+    <div class="p-3 border rounded shadow-sm bg-light">
+        <h6 class="text-left">Account No: {{current_user.id}}</h6>
+        <h6 class="text-left">Email: {{current_user.email}} </h6>
+        <h6 class="text-left">First Name: {{current_user.firstname}}</h6>
+        <h6 class="text-left">Last Name: {{current_user.lastname}}</h6>
+        <h6 class="text-left">Phone No: {{current_user.phone}}</h6>
+        <h6 class="text-left">Posts: </h6>
+<div class="p-2">
+            <div class="p-2 bg-light border border-primary" style="text-align: left">
+                <div>
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% for category, message in messages %}
+                            <div style="text-align: left" class="alert alert-{{ category }} mt-3 alert-dismissible" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" onclick=delete_flash(this)>
+                                    <span>&times;</span>
+                                </button>
+                            </div>
+                        {% endfor %}
+                    {% endwith %}
+                </div>
+                {% for post in current_user.posts %}
+                <div class="card border border-dark">
+                    <div class="card-header bg-dark text-white border border-dark">
+                        <h4>{{ post.title }}</h4>
+                        <small>Author: </small>
+                        <small>{{post.user.firstname}}</small>
+                        <small>{{post.user.lastname}}</small>
+                        <br>
+                        <small>{{ post.created.strftime('%H:%M:%S %d-%m-%Y') }}</small>
+                    </div>
+                    <div class="card-body">{{ post.body }}</div>
+                    <div class="card-footer">
+                        <a class="navbar-item" href="{{ url_for('posts.update', id=post.id) }}">Update</a>
+                        <a class="navbar-item" href="{{ url_for('posts.delete', id=post.id) }}">Delete</a>
+                    </div>
+                </div>
+                <br>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
 {% endblock %}

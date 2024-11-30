@@ -8,7 +8,6 @@
             <form method="POST">
                 <div class="p-2 bg-light border border-primary" style="text-align: left">
                     {{ form.csrf_token() }}
-
                     <div class="form-group">
                         {{ form.title.label}}<span style="color: red">*</span>
                         {{ form.title(class="form-control") }}

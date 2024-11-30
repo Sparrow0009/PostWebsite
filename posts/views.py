@@ -1,4 +1,6 @@
 from flask import Blueprint, render_template, flash, url_for, redirect
+from flask_login import current_user, login_required
+from flask_migrate import current
 from unicodedata import category
 
 from config import db, Post
@@ -7,18 +9,21 @@ from sqlalchemy import desc
 
 posts_bp = Blueprint('posts', __name__, template_folder = 'templates')
 
+
 @posts_bp.route('/posts')
+@login_required
 def posts():
     all_posts = Post.query.order_by(desc('id')).all()
     return render_template('posts/posts.html', posts = all_posts)
 
 
 @posts_bp.route('/create', methods = ('GET', 'POST'))
+@login_required
 def create():
 
     form = PostForm()
     if form.validate_on_submit():
-        new_post =Post(title = form.title.data, body = form.body.data)
+        new_post =Post(userid = current_user.get_id(), title = form.title.data, body = form.body.data)
 
         db.session.add(new_post)
         db.session.commit()
@@ -29,7 +34,11 @@ def create():
 
 
 @posts_bp.route('/<int:id>/update', methods = ('GET', 'POST'))
+@login_required
 def update(id):
+    if current_user.get_id() != id :
+        flash("You are not allowed to update posts of other users", category='danger')
+        return redirect(url_for('posts.posts'))
     post_to_update = Post.query.filter_by(id=id).first()
     if not post_to_update:
         return redirect(url_for('posts.posts'))
@@ -45,7 +54,9 @@ def update(id):
 
     return render_template('posts/update.html', form=form)
 
+
 @posts_bp.route('/<int:id>/delete')
+@login_required
 def delete(id):
     Post.query.filter_by(id=id).delete()
     db.session.commit()
