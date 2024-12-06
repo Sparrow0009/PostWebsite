@@ -3,6 +3,7 @@ from flask_login import current_user, login_required
 from flask_migrate import current
 from unicodedata import category
 
+from accounts.views import roles_required
 from config import db, Post
 from posts.forms import PostForm
 from sqlalchemy import desc
@@ -12,6 +13,7 @@ posts_bp = Blueprint('posts', __name__, template_folder = 'templates')
 
 @posts_bp.route('/posts')
 @login_required
+@roles_required('end_user')
 def posts():
     all_posts = Post.query.order_by(desc('id')).all()
     return render_template('posts/posts.html', posts = all_posts)
@@ -19,6 +21,7 @@ def posts():
 
 @posts_bp.route('/create', methods = ('GET', 'POST'))
 @login_required
+@roles_required('end_user')
 def create():
 
     form = PostForm()
@@ -35,6 +38,7 @@ def create():
 
 @posts_bp.route('/<int:id>/update', methods = ('GET', 'POST'))
 @login_required
+@roles_required('end_user')
 def update(id):
     if current_user.get_id() != id :
         flash("You are not allowed to update posts of other users", category='danger')
@@ -57,6 +61,7 @@ def update(id):
 
 @posts_bp.route('/<int:id>/delete')
 @login_required
+@roles_required('end_user')
 def delete(id):
     Post.query.filter_by(id=id).delete()
     db.session.commit()

@@ -1,6 +1,6 @@
 import pyotp
 from flask_qrcode import QRcode
-from flask import  Blueprint, render_template, flash, redirect, url_for, session
+from flask import  Blueprint, render_template, flash, redirect, url_for, session, abort
 from flask.cli import pass_script_info
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -10,10 +10,48 @@ from accounts.forms import RegistrationForm, LoginForm
 from config import User, db, limiter, load_user
 from markupsafe import Markup
 from flask_login import login_user, logout_user, current_user, login_required
+from functools import wraps
 
 accounts_bp = Blueprint('accounts', __name__, template_folder='templates')
 
+def verify_registration(f):
+    print('Registered Function {}'.format(f))
+    return f
+
+def verify_call(f):
+    @wraps(f)
+    def wrapped(*args, **kwargs):
+        print('Called Function {}'.format(f))
+        return f(*args, **kwargs)
+    return wrapped
+
+def conditional_verify_call(condition):
+    def inner_decorator(f):
+        @wraps(f)
+        def wrapped(*args, **kwargs):
+            if condition == True:
+                print('Called Function {}'.format(f))
+                return f(*args, **kwargs)
+        return wrapped
+    return inner_decorator
+
+
+def roles_required(*roles):
+    def inner_decorator(f):
+        @wraps(f)
+        def wrapped(*args, **kwargs):
+            if current_user.role not in roles:
+                flash("You are not authorized to view this page", category='danger')
+                abort(403)
+            return f(*args, **kwargs)
+        return wrapped
+    return inner_decorator
+
+
 @accounts_bp.route('/registration', methods = ['GET', 'POST'])
+@verify_registration
+@verify_call
+@conditional_verify_call(True)
 def registration():
     if current_user.is_authenticated:
         flash("You are already logged in", category = "info")
@@ -35,7 +73,7 @@ def registration():
         db.session.add(new_user)
         db.session.commit()
 
-        uri = str(pyotp.totp.TOTP(new_user.mfa_key).provisioning_uri(new_user.email, "Sparsh's Post app"))
+        uri = (pyotp.totp.TOTP(new_user.mfa_key).provisioning_uri(new_user.email, "Sparsh's Post app"))
         flash('You have not yet enabled Multi-Factor Authentication. Please enable first to login')
         return render_template('accounts/setup_mfa.html', secret=new_user.mfa_key, qr_uri = uri)
 
@@ -44,6 +82,9 @@ def registration():
 
 @accounts_bp.route('/login', methods = ['GET', 'POST'])
 @limiter.limit('20 per minute', error_message= 'Too Many Requests')
+@verify_registration
+@verify_call
+@conditional_verify_call(True)
 def login():
 
     if current_user.is_authenticated:
@@ -66,15 +107,19 @@ def login():
                 if not user.mfa_enabled:
                     user.mfa_enabled = True
                     db.session.commit()
-
                 login_user(user)
                 session["key"] = 0
                 flash("Login Successful", category='success')
-                return redirect(url_for('posts.posts'))
+                if current_user.role == 'db_admin':
+                    return redirect(url_for('admin.index'))
+                elif current_user.role == 'sec_admin':
+                    return redirect(url_for('security.security'))
+                else:
+                    return redirect(url_for('posts.posts'))
 
             elif not user.mfa_enabled:
                 flash("Multi Factor Authentication has not been enabled, please enable it to log in.", category='danger')
-                uri = str(pyotp.totp.TOTP(user.mfa_key).provisioning_uri(user.email, "Sparsh's post app"))
+                uri = (pyotp.totp.TOTP(user.mfa_key).provisioning_uri(user.email, "Sparsh's post app"))
                 return render_template('accounts/setup_mfa.html', secret = user.mfa_key, qr_uri = uri)
             flash("Incorrect Pin, please try again", category='danger')
         flash("Incorrect Email or Password, please try again", category='danger')
@@ -91,7 +136,6 @@ def login():
 
 
 @accounts_bp.route('/reset_attempts', methods=['GET'])
-@login_required
 def reset_attempts():
     session["key"] = 0
     flash("Your account has been unlocked, Please try logging in again now.", category = 'success')
@@ -105,7 +149,6 @@ def logout():
         flash("You have been successfully logged out.", category='success')
     return redirect(url_for('index'))
 
-@login_required
 @accounts_bp.route('/account')
 @login_required
 def account():

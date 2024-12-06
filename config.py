@@ -1,5 +1,5 @@
 import pyotp
-from flask import Flask, url_for
+from flask import Flask, url_for, flash, redirect, abort, render_template
 from flask_limiter import Limiter
 from flask_limiter.contrib.util import get_remote_address_cloudflare
 from flask_limiter.util import get_remote_address
@@ -97,6 +97,7 @@ class User(db.Model, UserMixin):
     mfa_key = db.Column(db.String(32), nullable = False, default=pyotp.random_base32)
     mfa_enabled = db.Column(db.Boolean, default = False)
     active = db.Column(db.Boolean, nullable = False, default = True)
+    role = db.Column(db.String(32), nullable = False, default = 'end_user')
 
     def __init__(self, email, firstname, lastname, phone, password, mfa_key=None):
         self.email = email
@@ -106,6 +107,7 @@ class User(db.Model, UserMixin):
         self.password = password
         self.mfa_key = pyotp.random_base32()
         self.mfa_enabled = False
+        self.role = 'end_user'
 
     @property
     def is_active(self):
@@ -123,14 +125,37 @@ class MainIndexLink(MenuLink):
         return url_for('index')
 
 class PostView(ModelView):
+    def is_accessible(self):
+        return current_user.is_authenticated and current_user.role == 'db_admin'
+    def inaccissible_callback(self, name, **kwargs):
+        if current_user.is_authenticated:
+            abort(403)
+        flash("Access denied: Administrator Access Required.", category='danger')
+        return redirect(url_for('accounts.login'))
+
     column_display_pk = True   # optional, but I like to see the IDs in the list
     column_hide_backrefs = False
     column_list = ('id','userid', 'created', 'title', 'body', 'user')
+    can_create = False
+    can_edit = False
+    can_delete = False
 
 class UserView(ModelView):
+    def is_accessible(self):
+        return current_user.is_authenticated and current_user.role == 'db_admin'
+    def inaccissible_callback(self, name, **kwargs):
+        if current_user.is_authenticated:
+            abort(403)
+        flash("Access denied: Administrator Access Required.", category='danger')
+        return redirect(url_for('accounts.login'))
+
     column_display_pk = True  # optional, but I like to see the IDs in the list
     column_hide_backrefs = False
-    column_list = ('id', 'email', 'password', 'firstname', 'lastname', 'phone', 'posts', 'mfa_key', 'mfa_enabled')
+    column_list = ('id', 'email', 'password', 'firstname', 'lastname', 'phone', 'posts', 'mfa_key', 'mfa_enabled', 'role')
+    can_create = False
+    can_edit = False
+    can_delete = False
+
 
 admin = Admin(app, name = 'DB Admin', template_mode= 'bootstrap4')
 admin._menu = admin._menu[1:]
