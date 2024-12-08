@@ -2,14 +2,14 @@ from datetime import datetime
 
 import pyotp
 from flask_qrcode import QRcode
-from flask import  Blueprint, render_template, flash, redirect, url_for, session, abort
+from flask import Blueprint, render_template, flash, redirect, url_for, session, abort, request
 from flask.cli import pass_script_info
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.security import check_password_hash
 from wtforms.validators import equal_to, EqualTo
 from accounts.forms import RegistrationForm, LoginForm
-from config import User, db, limiter, load_user
+from config import User, db, limiter, load_user, logger
 from markupsafe import Markup
 from flask_login import login_user, logout_user, current_user, login_required
 from functools import wraps
@@ -42,10 +42,12 @@ def roles_required(*roles):
     def inner_decorator(f):
         @wraps(f)
         def wrapped(*args, **kwargs):
-            if current_user.role not in roles:
-                flash("You are not authorized to view this page", category='danger')
-                abort(403)
-            return f(*args, **kwargs)
+            if current_user.is_authenticated:
+                if current_user.role not in roles:
+                    flash("You are not authorized to view this page", category='danger')
+                    logger.info('[User:{}, Role:{}, URL_Requested:{}, IP:{}] Unauthorized access'.format(current_user.email, current_user.role, request.url, get_remote_address()))
+                    abort(403)
+                return f(*args, **kwargs)
         return wrapped
     return inner_decorator
 
@@ -75,6 +77,9 @@ def registration():
         db.session.add(new_user)
         db.session.commit()
         new_user.generate_log()
+
+        logger.info('[User:{}, Role:{}, IP:{}] Successful Registration'.format(new_user.email, new_user.role, get_remote_address()))
+
         uri = (pyotp.totp.TOTP(new_user.mfa_key).provisioning_uri(new_user.email, "Sparsh's Post app"))
         flash('You have not yet enabled Multi-Factor Authentication. Please enable first to login')
         return render_template('accounts/setup_mfa.html', secret=new_user.mfa_key, qr_uri = uri)
@@ -109,9 +114,10 @@ def login():
                     user.mfa_enabled = True
                     db.session.commit()
                 login_user(user)
+                logger.info('[User:{}, Role:{}, IP:{}] Successful Login'.format(user.email, user.role, get_remote_address()))
+
                 session["key"] = 0
                 flash("Login Successful", category='success')
-
                 if user.log is None:
                     user.generate_log()
 
@@ -135,11 +141,13 @@ def login():
                 return render_template('accounts/setup_mfa.html', secret = user.mfa_key, qr_uri = uri)
             flash("Incorrect Pin, please try again", category='danger')
         flash("Incorrect Email or Password, please try again", category='danger')
+        logger.info('[User:{}, Attempts:{}, IP:{}] Invalid login attempt'.format(form.email.data, session["key"] + 1, get_remote_address()))
         session["key"] += 1
         remaining_attempts = 3 - session["key"]
 
     if session["key"] >= 3:
         flash(Markup('Login failed, maximum authentication attempts exceeded.'), category = "danger")
+        logger.info('[User:{}, Attempts:{}, IP:{}] Maximum login attempts exceeded'.format(form.email.data,session["key"], get_remote_address()))
         show_form = False
     elif 0 < session["key"] < 3:
         flash("Login Failed, you have {} attempts remaining".format(remaining_attempts), category='danger')

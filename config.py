@@ -1,5 +1,5 @@
 import pyotp
-from flask import Flask, url_for, flash, redirect, abort, render_template
+from flask import Flask, url_for, flash, redirect, abort, render_template, request
 from flask_limiter import Limiter
 from flask_limiter.contrib.util import get_remote_address_cloudflare
 from flask_limiter.util import get_remote_address
@@ -16,6 +16,7 @@ from flask_login import LoginManager, current_user
 from flask_login import UserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
 from wtforms.validators import EqualTo
+import logging
 
 app = Flask(__name__)
 
@@ -149,8 +150,12 @@ class MainIndexLink(MenuLink):
 class PostView(ModelView):
     def is_accessible(self):
         return current_user.is_authenticated and current_user.role == 'db_admin'
-    def inaccissible_callback(self, name, **kwargs):
+    def inaccessible_callback(self, name, **kwargs):
         if current_user.is_authenticated:
+            logger.info('[User:{}, Role:{}, URL_Requested:{}, IP:{}] Unauthorized access attempt'.format(current_user.email,
+                                                                                                 current_user.role,
+                                                                                                 request.url,
+                                                                                                 get_remote_address()))
             abort(403)
         flash("Access denied: Administrator Access Required.", category='danger')
         return redirect(url_for('accounts.login'))
@@ -158,15 +163,19 @@ class PostView(ModelView):
     column_display_pk = True   # optional, but I like to see the IDs in the list
     column_hide_backrefs = False
     column_list = ('id','userid', 'created', 'title', 'body', 'user')
-    #can_create = False
-    #can_edit = False
-    #can_delete = False
+    can_create = False
+    can_edit = False
+    can_delete = False
 
 class UserView(ModelView):
     def is_accessible(self):
         return current_user.is_authenticated and current_user.role == 'db_admin'
-    def inaccissible_callback(self, name, **kwargs):
+    def inaccessible_callback(self, name, **kwargs):
         if current_user.is_authenticated:
+            logger.info('[User:{}, Role:{}, URL_Requested:{}, IP:{}] Unauthorized access attempt'.format(current_user.email,
+                                                                                                 current_user.role,
+                                                                                                 request.url,
+                                                                                                 get_remote_address()))
             abort(403)
         flash("Access denied: Administrator Access Required.", category='danger')
         return redirect(url_for('accounts.login'))
@@ -174,35 +183,30 @@ class UserView(ModelView):
     column_display_pk = True  # optional, but I like to see the IDs in the list
     column_hide_backrefs = False
     column_list = ('id', 'email', 'password', 'firstname', 'lastname', 'phone', 'posts', 'mfa_key', 'mfa_enabled', 'role')
-    #can_create = False
-    #can_edit = False
-    #x`can_delete = False
-
-class LogView(ModelView):
-    def is_accessible(self):
-        return current_user.is_authenticated and current_user.role == 'db_admin'
-    def inaccissible_callback(self, name, **kwargs):
-        if current_user.is_authenticated:
-            abort(403)
-        flash("Access denied: Administrator Access Required.", category='danger')
-        return redirect(url_for('accounts.login'))
-    column_display_pk = True  # optional, but I like to see the IDs in the list
-    column_hide_backrefs = False
-    column_list = ('id','userid','registration','latest_login','previous_login','latest_IP','previous_IP','user')
     can_create = False
     can_edit = False
     can_delete = False
-
 
 admin = Admin(app, name = 'DB Admin', template_mode= 'bootstrap4')
 admin._menu = admin._menu[1:]
 admin.add_link(MainIndexLink(name = 'Home Page'))
 admin.add_view(PostView(Post, db.session))
 admin.add_view(UserView(User, db.session))
-admin.add_view(LogView(Log, db.session))
 
 limiter = Limiter(key_func=get_remote_address, app=app, default_limits=['500 per day'])
 
+
+# SECURITY LOGGER
+logger = logging.getLogger("Security Logger")
+logger.setLevel(logging.INFO)
+
+handler = logging.FileHandler("security.log", mode='a')
+handler.setLevel(logging.INFO)
+
+formatter = logging.Formatter('%(asctime)s : %(message)s', '%d/%m/%Y %I:%M:%S %p')
+handler.setFormatter(formatter)
+
+logger.addHandler(handler)
 from accounts.views import accounts_bp
 from posts.views import posts_bp
 from security.views import security_bp
