@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import pyotp
 from flask_qrcode import QRcode
 from flask import  Blueprint, render_template, flash, redirect, url_for, session, abort
@@ -72,11 +74,10 @@ def registration():
                         mfa_key = mfa_key)
         db.session.add(new_user)
         db.session.commit()
-
+        new_user.generate_log()
         uri = (pyotp.totp.TOTP(new_user.mfa_key).provisioning_uri(new_user.email, "Sparsh's Post app"))
         flash('You have not yet enabled Multi-Factor Authentication. Please enable first to login')
         return render_template('accounts/setup_mfa.html', secret=new_user.mfa_key, qr_uri = uri)
-
     return render_template('accounts/registration.html', form = form)
 
 
@@ -110,6 +111,17 @@ def login():
                 login_user(user)
                 session["key"] = 0
                 flash("Login Successful", category='success')
+
+                if user.log is None:
+                    user.generate_log()
+
+                user_log = user.log
+                user_log.previous_login = user_log.latest_login
+                user_log.latest_login = datetime.now()
+                user_log.previous_IP = user_log.latest_IP
+                user_log.latest_IP = get_remote_address()
+                db.session.commit()
+
                 if current_user.role == 'db_admin':
                     return redirect(url_for('admin.index'))
                 elif current_user.role == 'sec_admin':

@@ -92,6 +92,7 @@ class User(db.Model, UserMixin):
     lastname = db.Column(db.String(100), nullable = False)
     phone = db.Column(db.String(100), nullable = False)
     posts = db.relationship("Post", order_by = Post.id, back_populates = 'user')
+    log = db.relationship("Log", uselist=False, back_populates="user")
 
     #MFA information
     mfa_key = db.Column(db.String(32), nullable = False, default=pyotp.random_base32)
@@ -118,6 +119,27 @@ class User(db.Model, UserMixin):
 
     def check_password(self,password):
         return self.password == password
+    def generate_log(self):
+        new_log = Log(userid = self.id, registration = datetime.now())
+        db.session.add(new_log)
+        db.session.commit()
+
+
+class Log(db.Model):
+    __tablename__ = 'logs'
+    id = db.Column(db.Integer,primary_key = True)
+    userid = db.Column(db.Integer, db.ForeignKey('users.id'), nullable = False)
+    registration = db.Column(db.DateTime, nullable = False)
+    latest_login  = db.Column(db.DateTime, nullable = True)
+    previous_login = db.Column(db.DateTime, nullable = True)
+    latest_IP = db.Column(db.String(100), nullable = True)
+    previous_IP = db.Column(db.String(100), nullable = True)
+    user = db.relationship("User", back_populates = 'log')
+
+    def __init__(self, userid, registration):
+        self.userid = userid
+        self.registration = registration
+
 
 # DATABASE ADMINISTRATOR
 class MainIndexLink(MenuLink):
@@ -136,9 +158,9 @@ class PostView(ModelView):
     column_display_pk = True   # optional, but I like to see the IDs in the list
     column_hide_backrefs = False
     column_list = ('id','userid', 'created', 'title', 'body', 'user')
-    can_create = False
-    can_edit = False
-    can_delete = False
+    #can_create = False
+    #can_edit = False
+    #can_delete = False
 
 class UserView(ModelView):
     def is_accessible(self):
@@ -152,6 +174,21 @@ class UserView(ModelView):
     column_display_pk = True  # optional, but I like to see the IDs in the list
     column_hide_backrefs = False
     column_list = ('id', 'email', 'password', 'firstname', 'lastname', 'phone', 'posts', 'mfa_key', 'mfa_enabled', 'role')
+    #can_create = False
+    #can_edit = False
+    #x`can_delete = False
+
+class LogView(ModelView):
+    def is_accessible(self):
+        return current_user.is_authenticated and current_user.role == 'db_admin'
+    def inaccissible_callback(self, name, **kwargs):
+        if current_user.is_authenticated:
+            abort(403)
+        flash("Access denied: Administrator Access Required.", category='danger')
+        return redirect(url_for('accounts.login'))
+    column_display_pk = True  # optional, but I like to see the IDs in the list
+    column_hide_backrefs = False
+    column_list = ('id','userid','registration','latest_login','previous_login','latest_IP','previous_IP','user')
     can_create = False
     can_edit = False
     can_delete = False
@@ -162,6 +199,7 @@ admin._menu = admin._menu[1:]
 admin.add_link(MainIndexLink(name = 'Home Page'))
 admin.add_view(PostView(Post, db.session))
 admin.add_view(UserView(User, db.session))
+admin.add_view(LogView(Log, db.session))
 
 limiter = Limiter(key_func=get_remote_address, app=app, default_limits=['500 per day'])
 
@@ -173,3 +211,4 @@ app.register_blueprint(accounts_bp)
 app.register_blueprint(posts_bp)
 app.register_blueprint(security_bp)
 app.config['FLASK_ADMIN_FLUID_LAYOUT'] = True
+
