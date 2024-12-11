@@ -1,3 +1,4 @@
+from cryptography.fernet import Fernet
 from flask import Blueprint, render_template, flash, url_for, redirect
 from flask_limiter.util import get_remote_address
 from flask_login import current_user, login_required
@@ -5,7 +6,7 @@ from flask_migrate import current
 from unicodedata import category
 
 from accounts.views import roles_required
-from config import db, Post, logger
+from config import db, Post, logger, User
 from posts.forms import PostForm
 from sqlalchemy import desc
 
@@ -17,6 +18,11 @@ posts_bp = Blueprint('posts', __name__, template_folder = 'templates')
 @roles_required('end_user')
 def posts():
     all_posts = Post.query.order_by(desc('id')).all()
+    for post in all_posts:
+        user = User.query.get(post.userid)
+        cipher = Fernet(user.derive_key())
+        post.title = cipher.decrypt(post.title).decode()
+        post.body = cipher.decrypt(post.body).decode()
     return render_template('posts/posts.html', posts = all_posts)
 
 
@@ -27,8 +33,11 @@ def create():
 
     form = PostForm()
     if form.validate_on_submit():
-        new_post =Post(userid = current_user.get_id(), title = form.title.data, body = form.body.data)
-
+        user = User.query.get(current_user.get_id())
+        cipher = Fernet(user.derive_key())
+        encrypted_title = cipher.encrypt(form.title.data.encode())
+        encrypted_body = cipher.encrypt(form.body.data.encode())
+        new_post = Post(userid=current_user.get_id(), title=encrypted_title, body=encrypted_body)
         db.session.add(new_post)
         db.session.commit()
         logger.info('[User:{}, Role:{}, Post_ID:{}, IP:{}] Post Created'.format(current_user.email, current_user.role,new_post.userid, get_remote_address()))

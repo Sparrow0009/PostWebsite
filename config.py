@@ -1,4 +1,7 @@
+import base64
+
 import pyotp
+from cryptography.fernet import Fernet
 from flask import Flask, url_for, flash, redirect, abort, render_template, request
 from flask_limiter import Limiter
 from flask_limiter.contrib.util import get_remote_address_cloudflare
@@ -18,6 +21,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from wtforms.validators import EqualTo
 import logging
 from argon2 import PasswordHasher
+from hashlib import scrypt
 
 app = Flask(__name__)
 
@@ -103,6 +107,7 @@ class User(db.Model, UserMixin):
     mfa_enabled = db.Column(db.Boolean, default = False)
     active = db.Column(db.Boolean, nullable = False, default = True)
     role = db.Column(db.String(32), nullable = False, default = 'end_user')
+    salt = db.Column(db.String(100), nullable = False)
 
     def __init__(self, email, firstname, lastname, phone, password, mfa_key=None):
         self.email = email
@@ -113,6 +118,7 @@ class User(db.Model, UserMixin):
         self.mfa_key = pyotp.random_base32()
         self.mfa_enabled = False
         self.role = 'end_user'
+        self.salt = base64.b64encode(secrets.token_bytes(32)).decode()
 
     @property
     def is_active(self):
@@ -129,6 +135,9 @@ class User(db.Model, UserMixin):
         db.session.add(new_log)
         db.session.commit()
 
+    def derive_key(self):
+        key = scrypt(password = self.password.encode(), salt = self.salt.encode(), n=2048, r=8, p=1, dklen=32)
+        return base64.urlsafe_b64encode(key)
 
 class Log(db.Model):
     __tablename__ = 'logs'
@@ -186,7 +195,7 @@ class UserView(ModelView):
 
     column_display_pk = True  # optional, but I like to see the IDs in the list
     column_hide_backrefs = False
-    column_list = ('id', 'email', 'password', 'firstname', 'lastname', 'phone', 'posts', 'mfa_key', 'mfa_enabled', 'role')
+    column_list = ('id', 'email', 'password', 'firstname', 'lastname', 'phone', 'posts', 'mfa_key', 'mfa_enabled', 'role','salt')
     #can_create = False
     #can_edit = False
     #can_delete = False
