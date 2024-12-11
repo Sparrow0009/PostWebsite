@@ -8,8 +8,9 @@ from config import User
 
 security_bp = Blueprint('security', __name__, template_folder= 'templates')
 
-@login_required
+
 @security_bp.route('/security')
+@login_required
 @roles_required('sec_admin')
 def security():
     logs = []
