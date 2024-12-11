@@ -1,13 +1,8 @@
 from datetime import datetime
-
 import pyotp
 from flask_qrcode import QRcode
 from flask import Blueprint, render_template, flash, redirect, url_for, session, abort, request
-from flask.cli import pass_script_info
-from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from werkzeug.security import check_password_hash
-from wtforms.validators import equal_to, EqualTo
 from accounts.forms import RegistrationForm, LoginForm
 from config import User, db, limiter, load_user, logger, ph
 from markupsafe import Markup
@@ -98,7 +93,7 @@ def login():
         return redirect(url_for('posts.posts'))
 
     # checks if the session exists, if not, creates one and sets value to 0.
-    global remaining_attempts
+    #global remaining_attempts
     show_form = True
     if not session.get("key"):
         session["key"] = 0
@@ -143,7 +138,7 @@ def login():
         flash("Incorrect Email or Password, please try again", category='danger')
         logger.info('[User:{}, Attempts:{}, IP:{}] Invalid login attempt'.format(form.email.data, session["key"] + 1, get_remote_address()))
         session["key"] += 1
-        remaining_attempts = 3 - session["key"]
+    remaining_attempts = 3 - session["key"]
 
     if session["key"] >= 3:
         flash(Markup('Login failed, maximum authentication attempts exceeded.'), category = "danger")

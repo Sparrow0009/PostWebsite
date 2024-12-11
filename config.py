@@ -1,5 +1,7 @@
 import base64
 import os
+
+import argon2.exceptions
 import pyotp
 from cryptography.fernet import Fernet
 from flask import Flask, url_for, flash, redirect, abort, render_template, request
@@ -23,10 +25,18 @@ import logging
 from argon2 import PasswordHasher
 from hashlib import scrypt
 from dotenv import load_dotenv
+from flask_talisman import Talisman
 
 
 app = Flask(__name__)
 
+csp = {'default_src': ['self','\'self\''],
+       'script_src': ['https//www.google.com/recaptcha/', 'https://www.gstatic.com/recaptcha',
+                      'https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js'],
+       'style_src': ['https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css'],
+       'frame_src': ['https://www.google.com/recaptcha/', 'https://recaptcha.google.com/recaptcha/'],}
+
+talisman = Talisman(app, content_security_policy=csp)
 load_dotenv()
 
 qrcode = QRcode(app)
@@ -132,8 +142,11 @@ class User(db.Model, UserMixin):
         return str(self.id)
 
     def check_password(self,password):
-        password_verified = ph.verify(self.password, password)
-        return password_verified
+        try:
+            password_verified = ph.verify(self.password, password)
+            return password_verified
+        except argon2.exceptions.VerifyMismatchError:
+            return False
     def generate_log(self):
         new_log = Log(userid = self.id, registration = datetime.now())
         db.session.add(new_log)

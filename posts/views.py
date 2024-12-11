@@ -2,9 +2,6 @@ from cryptography.fernet import Fernet
 from flask import Blueprint, render_template, flash, url_for, redirect
 from flask_limiter.util import get_remote_address
 from flask_login import current_user, login_required
-from flask_migrate import current
-from unicodedata import category
-
 from accounts.views import roles_required
 from config import db, Post, logger, User
 from posts.forms import PostForm

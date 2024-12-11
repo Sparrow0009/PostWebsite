@@ -1,7 +1,4 @@
 import re
-from flask_limiter import RateLimitExceeded
-from rich.markup import render
-
 from config import app, limiter
 from flask import render_template, request
 
@@ -44,4 +41,4 @@ def waf_protection():
             return render_template('errors/attack.html', attack_type=attack_type)
 
 if __name__ == '__main__':
-    app.run()
+    app.run(ssl_context=('cert.pem', 'key.pem'))
