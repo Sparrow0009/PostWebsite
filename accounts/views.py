@@ -9,7 +9,7 @@ from flask_limiter.util import get_remote_address
 from werkzeug.security import check_password_hash
 from wtforms.validators import equal_to, EqualTo
 from accounts.forms import RegistrationForm, LoginForm
-from config import User, db, limiter, load_user, logger
+from config import User, db, limiter, load_user, logger, ph
 from markupsafe import Markup
 from flask_login import login_user, logout_user, current_user, login_required
 from functools import wraps
@@ -72,7 +72,7 @@ def registration():
                         firstname = form.firstname.data,
                         lastname = form.lastname.data,
                         phone = form.phone.data,
-                        password = form.password.data,
+                        password = ph.hash(form.password.data),
                         mfa_key = mfa_key)
         db.session.add(new_user)
         db.session.commit()

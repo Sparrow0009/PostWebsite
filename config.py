@@ -17,6 +17,7 @@ from flask_login import UserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
 from wtforms.validators import EqualTo
 import logging
+from argon2 import PasswordHasher
 
 app = Flask(__name__)
 
@@ -28,6 +29,8 @@ login_manager.login_view = 'accounts.login'
 login_manager.login_message = 'Please Log in first you donut!'
 login_manager.login_message_category = 'info'
 
+
+ph = PasswordHasher()
 @login_manager.user_loader
 def load_user(id):
     return User.query.get(int(id))
@@ -86,7 +89,7 @@ class User(db.Model, UserMixin):
 
     #User authentication information
     email = db.Column(db.String(100), nullable = False, unique = True)
-    password = db.Column(db.String(100), nullable = False,)
+    password = db.Column(db.String(100), nullable = False)
 
     #User information
     firstname = db.Column(db.String(100), nullable = False)
@@ -119,7 +122,8 @@ class User(db.Model, UserMixin):
         return str(self.id)
 
     def check_password(self,password):
-        return self.password == password
+        password_verified = ph.verify(self.password, password)
+        return password_verified
     def generate_log(self):
         new_log = Log(userid = self.id, registration = datetime.now())
         db.session.add(new_log)
@@ -129,7 +133,7 @@ class User(db.Model, UserMixin):
 class Log(db.Model):
     __tablename__ = 'logs'
     id = db.Column(db.Integer,primary_key = True)
-    userid = db.Column(db.Integer, db.ForeignKey('users.id'), nullable = False)
+    userid = db.Column(db.Integer, db.ForeignKey('users.id'), nullable = True)
     registration = db.Column(db.DateTime, nullable = False)
     latest_login  = db.Column(db.DateTime, nullable = True)
     previous_login = db.Column(db.DateTime, nullable = True)
@@ -183,9 +187,9 @@ class UserView(ModelView):
     column_display_pk = True  # optional, but I like to see the IDs in the list
     column_hide_backrefs = False
     column_list = ('id', 'email', 'password', 'firstname', 'lastname', 'phone', 'posts', 'mfa_key', 'mfa_enabled', 'role')
-    can_create = False
-    can_edit = False
-    can_delete = False
+    #can_create = False
+    #can_edit = False
+    #can_delete = False
 
 admin = Admin(app, name = 'DB Admin', template_mode= 'bootstrap4')
 admin._menu = admin._menu[1:]

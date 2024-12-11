@@ -19,3 +19,4 @@ Flask-Limiter
 SQLAlchemy~=2.0.35
 pyotp
 flask-qrcode
+argon2-cffi
