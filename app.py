@@ -1,8 +1,10 @@
+import re
 from flask_limiter import RateLimitExceeded
 from rich.markup import render
 
 from config import app, limiter
-from flask import render_template
+from flask import render_template, request
+
 
 @app.route('/')
 def index():
@@ -27,6 +29,19 @@ def internal_server_error(error):
 @app.errorhandler(501)
 def not_implemented_error(error):
     return render_template('errors/501.html'), 501
+
+
+conditions = {
+    "SQL Injection": re.compile(r"(union|select|insert|drop|alter|;|`|')", re.IGNORECASE),
+    "XSS": re.compile(r"(<script>|<iframe>|%3Cscript%3E|%3Ciframe%3E)", re.IGNORECASE),
+    "Path Traversal": re.compile(r"(\.\./|\.\.|%2e%2e%2f|%2e%2e/)", re.IGNORECASE),
+}
+
+@app.before_request
+def waf_protection():
+    for attack_type, attack_pattern in conditions.items():
+        if attack_pattern.search(request.path) or attack_pattern.search(request.query_string.decode()):
+            return render_template('errors/attack.html', attack_type=attack_type)
 
 if __name__ == '__main__':
     app.run()
