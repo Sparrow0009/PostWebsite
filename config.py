@@ -1,5 +1,5 @@
 import base64
-
+import os
 import pyotp
 from cryptography.fernet import Fernet
 from flask import Flask, url_for, flash, redirect, abort, render_template, request
@@ -22,8 +22,12 @@ from wtforms.validators import EqualTo
 import logging
 from argon2 import PasswordHasher
 from hashlib import scrypt
+from dotenv import load_dotenv
+
 
 app = Flask(__name__)
+
+load_dotenv()
 
 qrcode = QRcode(app)
 
@@ -40,16 +44,16 @@ def load_user(id):
     return User.query.get(int(id))
 
 # SECRET KEY FOR FLASK FORMS
-app.config['SECRET_KEY'] = secrets.token_hex(16)
+app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY')
 
 #DATABASE CONFIGURATION
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///csc2031blog.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('FLASK_SQLALCHEMY_DATABASE_URI')
 app.config['SQLALCHEMY_ECHO'] = True
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 #CAPTCHA CONFIGURATION
-app.config['RECAPTCHA_PUBLIC_KEY'] ='6LcaBV4qAAAAABbnBqXTymeD_jLjJfiXGOu8Wu82'
-app.config['RECAPTCHA_PRIVATE_KEY'] ='6LcaBV4qAAAAAEZUnlbcLE0ypUMrxuLj6wsH1P6O'
+app.config['RECAPTCHA_PUBLIC_KEY'] = os.getenv('FLASK_RECAPTCHA_PUBLIC_KEY')
+app.config['RECAPTCHA_PRIVATE_KEY'] = os.getenv('FLASK_RECAPTCHA_PRIVATE_KEY')
 
 
 metadata = MetaData(

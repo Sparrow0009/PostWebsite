@@ -28,18 +28,30 @@
                         <div class="form-group">
                             {{ form.email.label}}<span style="color: red">*</span>
                             {{ form.email(class="form-control") }}
+                            {% for error in form.email.errors %}
+                                {{ error }}<br>
+                            {% endfor %}
                         </div>
                         <div class="form-group">
                             {{ form.firstname.label}}<span style="color: red">*</span>
                             {{ form.firstname(class="form-control") }}
+                            {% for error in form.firstname.errors %}
+                                {{ error }}<br>
+                            {% endfor %}
                         </div>
                         <div class="form-group">
                             {{ form.lastname.label}}<span style="color: red">*</span>
                             {{ form.lastname(class="form-control") }}
+                            {% for error in form.lastname.errors %}
+                                {{ error }}<br>
+                            {% endfor %}
                         </div>
                         <div class="form-group">
                             {{ form.phone.label}}<span style="color: red">*</span>
                             {{ form.phone(class="form-control") }}
+                            {% for error in form.phone.errors %}
+                                {{ error }}<br>
+                            {% endfor %}
                         </div>
                         <div class="form-group">
                             {{ form.password.label}}<span style="color: red">*</span>

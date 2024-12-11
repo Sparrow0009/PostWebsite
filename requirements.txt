@@ -21,3 +21,4 @@ pyotp
 flask-qrcode
 argon2-cffi
 cryptography
+email_validator
