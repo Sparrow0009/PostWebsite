@@ -1,6 +1,6 @@
 from datetime import datetime
 import pyotp
-from flask_qrcode import QRcode
+from cryptography.fernet import Fernet
 from flask import Blueprint, render_template, flash, redirect, url_for, session, abort, request
 from flask_limiter.util import get_remote_address
 from accounts.forms import RegistrationForm, LoginForm
@@ -168,6 +168,11 @@ def logout():
 @login_required
 def account():
     if current_user.is_authenticated:
+        user = User.query.get(current_user.get_id())
+        cipher = Fernet(user.derive_key())
+        for post in current_user.posts:
+            post.title = cipher.decrypt(post.title).decode()
+            post.body = cipher.decrypt(post.body).decode()
         return render_template('accounts/account.html')
     else:
         return render_template('accounts/account.html', user=None)

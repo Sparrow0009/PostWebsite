@@ -1,5 +1,5 @@
 import re
-from config import app, limiter
+from config import app
 from flask import render_template, request
 
 

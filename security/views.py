@@ -1,6 +1,5 @@
 from flask import Blueprint, render_template
 from flask_login import login_required
-
 from accounts.views import roles_required
 from config import User
 

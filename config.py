@@ -1,15 +1,12 @@
 import base64
 import os
-
 import argon2.exceptions
 import pyotp
-from cryptography.fernet import Fernet
-from flask import Flask, url_for, flash, redirect, abort, render_template, request
+from flask import Flask, url_for, flash, redirect, abort, request
 from flask_limiter import Limiter
-from flask_limiter.contrib.util import get_remote_address_cloudflare
 from flask_limiter.util import get_remote_address
 from flask_sqlalchemy import  SQLAlchemy
-from flask_migrate import Migrate, current
+from flask_migrate import Migrate
 from sqlalchemy import MetaData
 from datetime import datetime
 from flask_admin import Admin
@@ -19,8 +16,6 @@ import secrets
 from flask_qrcode import QRcode
 from flask_login import LoginManager, current_user
 from flask_login import UserMixin
-from werkzeug.security import check_password_hash, generate_password_hash
-from wtforms.validators import EqualTo
 import logging
 from argon2 import PasswordHasher
 from hashlib import scrypt
@@ -213,9 +208,9 @@ class UserView(ModelView):
     column_display_pk = True  # optional, but I like to see the IDs in the list
     column_hide_backrefs = False
     column_list = ('id', 'email', 'password', 'firstname', 'lastname', 'phone', 'posts', 'mfa_key', 'mfa_enabled', 'role','salt')
-    #can_create = False
-    #can_edit = False
-    #can_delete = False
+    can_create = False
+    can_edit = False
+    can_delete = False
 
 admin = Admin(app, name = 'DB Admin', template_mode= 'bootstrap4')
 admin._menu = admin._menu[1:]
