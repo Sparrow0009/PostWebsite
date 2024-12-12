@@ -25,8 +25,8 @@
                             <td>{{ user.log.registration if user.log else 'None' }}</td>
                             <td>{{ user.log.latest_login if user.log else 'None' }}</td>
                             <td>{{ user.log.previous_login if user.log else 'None' }}</td>
-                            <td>{{ user.log.latest_ip if user.log else 'None' }}</td>
-                            <td>{{ user.log.previous_ip if user.log else 'None' }}</td>
+                            <td>{{ user.log.latest_IP if user.log else 'None' }}</td>
+                            <td>{{ user.log.previous_IP if user.log else 'None' }}</td>
                         </tr>
                     {% endfor %}
                 </tbody>

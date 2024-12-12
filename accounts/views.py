@@ -70,8 +70,10 @@ def registration():
                         password = ph.hash(form.password.data),
                         mfa_key = mfa_key)
         db.session.add(new_user)
-        db.session.commit()
         new_user.generate_log()
+        new_user.log.latest_IP = get_remote_address()
+        db.session.commit()
+
 
         logger.info('[User:{}, Role:{}, IP:{}] Successful Registration'.format(new_user.email, new_user.role, get_remote_address()))
 
