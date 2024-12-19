@@ -14,9 +14,9 @@ The website incorporates several security features such as
 - **Role-Based Access Control**
 - **Event-Logging**
 - **Password Hashing**
-- ** Symmetric Encrytion**
-- ** Input Validation**
-- ** Specific Error Pages**
+- **Symmetric Encrytion**
+- **Input Validation**
+- **Specific Error Pages**
 - **Firewall Rules**
 - **HTTPS Data Transmission**
 
